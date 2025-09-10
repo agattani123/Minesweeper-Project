@@ -25,6 +25,8 @@ import javax.swing.*;
  * it will instantiate a TicTacToe object to serve as the game's model.
  */
 public class Game implements Runnable {
+    private int gameNumber = 1;
+    
     public void run() {
         // NOTE: the 'final' keyword denotes immutability even for local variables.
 
