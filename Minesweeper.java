@@ -1,51 +1,111 @@
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.Random;
+import java.util.logging.Logger;
+import java.util.logging.Level;
 
-//Class for minesweeper game
+/**
+ * Minesweeper game logic class.
+ * Handles the core game mechanics including board generation, tile flipping,
+ * game state management, and win/loss conditions.
+ */
 public class Minesweeper {
     
-    //Minesweeper parameters
-    private Tile[][] board;
-    private int gameOver;
-    private int safeTiles;
-    private LinkedList<Tile> flipTrack;
+    private static final Logger LOGGER = Logger.getLogger(Minesweeper.class.getName());
     
-    //Constructor
+    private Tile[][] board;
+    private int gameState;
+    private int remainingSafeTiles;
+    private LinkedList<Tile> moveHistory;
+    
+    /**
+     * Default constructor.
+     * Initializes a new game with random bomb placement.
+     */
     public Minesweeper() {
         reset();
     }
     
-    //Constructor for test, the boolean means nothing
-    public Minesweeper(boolean b) {
+    /**
+     * Constructor for testing purposes.
+     * Creates a game with predictable bomb placement for unit tests.
+     * @param isTestMode flag to indicate test mode (value doesn't matter)
+     */
+    public Minesweeper(boolean isTestMode) {
         resetForTest();
     }
     
-    //Flips a tile. Makes sure to end game if a bomb is flipped or the last safe tile
-    //is flipped
-    public boolean flip(int r, int c) {
-        if (board[r][c].isFlipped() || gameOver == -1 || gameOver == 1) {
+    /**
+     * Flips a tile at the specified coordinates.
+     * Handles game state changes and auto-reveals adjacent tiles with zero bombs.
+     * @param row the row coordinate
+     * @param col the column coordinate
+     * @return true if the flip was successful, false if invalid or game is over
+     */
+    public boolean flip(int row, int col) {
+        if (!isValidMove(row, col)) {
             return false;
         }
-        board[r][c].flipTile();
-        flipTrack.add(board[r][c]);
-        if (board[r][c].isBomb()) {
-            gameOver = -1;
+        
+        Tile tile = board[row][col];
+        tile.flipTile();
+        moveHistory.add(tile);
+        
+        if (tile.isBomb()) {
+            gameState = GameConstants.GAME_LOST;
+            LOGGER.log(Level.INFO, "Game lost - bomb flipped at ({0}, {1})", new Object[]{row, col});
         } else {
-            if (board[r][c].getNumBombs() == 0) {
-                ArrayList<Tile> neighbors = board[r][c].getNeighbors();
-                for (Tile t : neighbors) {
-                    int x = t.getXPos();
-                    int y = t.getYPos();
-                    flip(x, y);
-                }
+            remainingSafeTiles--;
+            
+            // Auto-reveal adjacent tiles if this tile has no neighboring bombs
+            if (tile.getNumBombs() == 0) {
+                revealAdjacentTiles(tile);
             }
-            safeTiles--;
+            
+            // Check for win condition
+            if (remainingSafeTiles == 0) {
+                gameState = GameConstants.GAME_WON;
+                LOGGER.log(Level.INFO, "Game won - all safe tiles revealed");
+            }
         }
-        if (safeTiles == 0) {
-            gameOver = 1;
-        }
+        
         return true;
+    }
+    
+    /**
+     * Checks if a move is valid.
+     * @param row the row coordinate
+     * @param col the column coordinate
+     * @return true if the move is valid
+     */
+    private boolean isValidMove(int row, int col) {
+        return isValidCoordinate(row, col) && 
+               !board[row][col].isFlipped() && 
+               gameState == GameConstants.GAME_IN_PROGRESS;
+    }
+    
+    /**
+     * Checks if coordinates are within board bounds.
+     * @param row the row coordinate
+     * @param col the column coordinate
+     * @return true if coordinates are valid
+     */
+    private boolean isValidCoordinate(int row, int col) {
+        return row >= 0 && row < GameConstants.BOARD_ROWS && 
+               col >= 0 && col < GameConstants.BOARD_COLS;
+    }
+    
+    /**
+     * Reveals all adjacent tiles recursively.
+     * @param tile the tile whose neighbors should be revealed
+     */
+    private void revealAdjacentTiles(Tile tile) {
+        ArrayList<Tile> neighbors = tile.getNeighbors();
+        for (Tile neighbor : neighbors) {
+            int x = neighbor.getXPos();
+            int y = neighbor.getYPos();
+            flip(x, y);
+        }
     }
     
     //Unflips the most recently flipped tile. Will only unflip if the most recent tile is a bomb.
