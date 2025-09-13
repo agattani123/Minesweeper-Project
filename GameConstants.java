@@ -4,6 +4,10 @@
  */
 public final class GameConstants {
     
+    public static final int BOARD_ROWS = 8;
+    public static final int BOMB_COUNT = 10;
+
+    
     // Board dimensions
     public static final int BOARD_ROWS = 8;
     public static final int BOARD_COLS = 8;
